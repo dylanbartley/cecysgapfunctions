@@ -1,4 +1,8 @@
 node_modules/
 *lock.json
 
+# firebase credentials json. + google recaptcha sercret key for convenience
 private.json
+
+# local file for trying stuff
+test.js

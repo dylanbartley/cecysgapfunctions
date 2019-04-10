@@ -9,8 +9,7 @@ const uuid = require('uuid/v3');
 // firebase service account json file. added the google recaptcha secret to it for convienience
 const privateConfig = require('./private.json');
 
-const DOMAIN_NAME = 'cecysgap.com';
-const ORDER_ENDPOINT = 'https://cecysgapwebapp.firebaseio.com/orders.json';
+const NAMESPACE = uuid('cecysgap.com', uuid.DNS);
 
 const RECAPTCHA_ENDPOINT = 'https://www.google.com/recaptcha/api/siteverify';
 
@@ -67,14 +66,13 @@ exports.orderSubmit = functions.https.onRequest(( request, response ) => {
     if (request.method !== 'POST') {
       return response.status(403).json({ message: 'Method Not Allowed' });
     }
-    
-    // docs wise this should already be parsed to JS. but it's not here
-    let data = JSON.parse(request.body);
+
+    let data = request.body;
     
     // clean request data
     const textRe = /[^A-Za-z0-9\s.-]/;
     const orderData = {
-      uid: uuid(DOMAIN_NAME, uuid.DNS),
+      uid: uuid(Date.now().toString(), NAMESPACE),
       timestamp: Date.now(),
       name: data.name.replace(textRe, ''),
       number: data.number.replace(textRe, ''), // not gonna bother validating actual number format. as long as the text is safe
