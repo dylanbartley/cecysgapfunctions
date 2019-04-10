@@ -1,15 +1,30 @@
 const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+
 const cors = require('cors')({ origin: true });
 const fetch = require('node-fetch');
 const qs = require('qs');
 const uuid = require('uuid/v3');
 
-const privateConfig = require('./private');
+// firebase service account json file. added the google recaptcha secret to it for convienience
+const privateConfig = require('./private.json');
 
 const DOMAIN_NAME = 'cecysgap.com';
 const ORDER_ENDPOINT = 'https://cecysgapwebapp.firebaseio.com/orders.json';
 
 const RECAPTCHA_ENDPOINT = 'https://www.google.com/recaptcha/api/siteverify';
+
+/**
+ * Initialize admin
+ */
+admin.initializeApp({
+  credential: admin.credential.cert(privateConfig),
+  databaseURL: 'https://cecysgapwebapp.firebaseio.com/'
+});
+ 
+/**
+ * HTTP end point for fetching orders for customer app
+ */
 
 /**
  * HTTP end point to process order submissions from customer app
@@ -36,7 +51,7 @@ exports.orderSubmit = functions.https.onRequest((request, response) => {
     
     // verify recaptcha
     const postData = {
-      secret: privateConfig.RECAPTCHA_SECRET,
+      secret: privateConfig.recaptcha_secret,
       response: data.token
     };
     fetch(RECAPTCHA_ENDPOINT, {
@@ -49,11 +64,12 @@ exports.orderSubmit = functions.https.onRequest((request, response) => {
       console.log('ReCaptcha Result', json);
       if (json.success) {
         // save order to database
-        return fetch(ORDER_ENDPOINT, {
-          method: 'post',
-          body:    JSON.stringify(orderData),
-          headers: { 'Content-Type': 'application/json' }
-        });
+        // return fetch(ORDER_ENDPOINT, {
+        //   method: 'post',
+        //   body:    JSON.stringify(orderData),
+        //   headers: { 'Content-Type': 'application/json' }
+        // });
+        return admin.database().ref('orders').push(orderData);
       } else {
         return Promise.reject(new Error('Recaptcha Unsuccessful'));
       }
