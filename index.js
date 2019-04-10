@@ -25,11 +25,44 @@ admin.initializeApp({
 /**
  * HTTP end point for fetching orders for customer app
  */
+exports.orderSearch = functions.https.onRequest(( request, response ) => {
+  return cors(request, response, () => {
+    if (request.method !== 'POST') {
+      return response.status(403).json({ message: 'Method Not Allowed' });
+    }
+    
+    let results = [];
+    let data = request.body;
+    
+    if (!Array.isArray(data)) {
+      response.status(200).json(results);
+      return;
+    }
+    
+    admin.database()
+      .ref('orders')
+      .once('value')
+      .then(snapshot => {
+        snapshot.forEach(child => {
+          var childData = child.val();
+          if (data.includes(childData.uid)) {
+            results.push(childData);
+          }
+        });
+        
+        return response.status(200).json(results);
+      })
+      .catch(err => {
+        console.error('Orders Fetch Failed:', err);
+        response.status(500).json({ message: err.message });
+      });
+  });
+});
 
 /**
  * HTTP end point to process order submissions from customer app
  */
-exports.orderSubmit = functions.https.onRequest((request, response) => {
+exports.orderSubmit = functions.https.onRequest(( request, response ) => {
   return cors(request, response, () => {
     if (request.method !== 'POST') {
       return response.status(403).json({ message: 'Method Not Allowed' });
