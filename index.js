@@ -113,6 +113,49 @@ exports.orderSubmit = functions.https.onRequest(( request, response ) => {
   });
 });
 
+/**
+ * HTTP end point to process feedback submissions from customer app
+ */
+exports.feedback = functions.https.onRequest(( request, response ) => {
+  return cors(request, response, () => {
+    let data = request.query;
+    console.log('request query', data);
+    // clean request data
+    const textRe = /[^A-Za-z0-9\s.-]/;
+    const feedbackData = {
+      timestamp: Date.now(),
+      category: data.category,
+      rating: data.rating,
+      feedback: data.feedback.replace(textRe, '')
+    };
+    
+    // verify recaptcha
+    const postData = {
+      secret: privateConfig.recaptcha_secret,
+      response: data.token
+    };
+    fetch(RECAPTCHA_ENDPOINT, {
+      method: 'post',
+      body:    qs.stringify(postData),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+    .then(res => res.json())
+    .then(json => {
+      console.log('ReCaptcha Result', json);
+      if (json.success) {
+        return admin.database().ref('feedback').push(feedbackData);
+      } else {
+        return Promise.reject(new Error('Recaptcha Unsuccessful'));
+      }
+    })
+    .then(res => response.status(201).send('OK'))
+    .catch(err => {
+      console.error(err);
+      response.status(500).json({ message: err.message });
+    });
+  });
+});
+
 // exports.onFileChange = functions.storage.object().onChange(event => {
 //     console.log(event);
 //     return;
