@@ -30,6 +30,10 @@ exports.orderSearch = functions.https.onRequest(( request, response ) => {
       return response.status(403).json({ message: 'Method Not Allowed' });
     }
     
+    // get start of day
+    let nw = new Date();
+    let sod = new Date(nw.getFullYear(), nw.getMonth(), nw.getDate()).getTime();
+    
     let results = [];
     let data = request.body;
     
@@ -37,14 +41,19 @@ exports.orderSearch = functions.https.onRequest(( request, response ) => {
       response.status(200).json(results);
       return;
     }
-    
+
     admin.database()
       .ref('orders')
       .once('value')
       .then(snapshot => {
         snapshot.forEach(child => {
           var childData = child.val();
-          if (data.includes(childData.uid)) {
+          
+          // remove orders older than today. they aren't relavant
+          if (childData.timestamp < sod) {
+            child.ref.remove();
+          }
+          else if (data.includes(childData.uid)) {
             results.push(childData);
           }
         });
